@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 import os
-from typing import List
 import shutil
-import subprocess
 import stat
+import subprocess
 import sys
+from typing import List
 
-from asuscharged import APP_NAME, PACKAGE_NAME
-
+APP_NAME = "asuscharged"
+PACKAGE_NAME = "asus-charge-daemon"
 DATADIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 SYSTEMD_SYSTEM_UNIT_FILE = "asuscharged.service"
 DBUS_INTERFACE_FILE = "ca.cforrester.AsusChargeDaemon1.xml"
 DBUS_SYSTEM_SERVICE_FILE = "ca.cforrester.AsusChargeDaemon1.service"
 DBUS_SYSTEM_CONF_FILE = "ca.cforrester.AsusChargeDaemon1.conf"
-REQUIRED_PACKAGES = ("asus-charge-control", "dbus-next", "systemd-python")
 
 files = {}
 
@@ -66,13 +65,14 @@ def files_exist() -> List[str]:
     return exists
 
 
-def install() -> None:
-    exists = files_exist()
-    if exists:
-        exists = "\n".join(exists)
-        print(f"The following files exist:\n{exists}")
-        if not input("Overwrite? [Y/N] ").startswith(("y", "Y")):
-            raise SystemExit("Not overwriting.")
+def install(install_daemon=True, force=False, local=False) -> None:
+    if not force:
+        exists = files_exist()
+        if exists:
+            exists = "\n".join(exists)
+            print(f"The following files exist:\n{exists}")
+            if not input("Overwrite? [Y/N] ").startswith(("y", "Y")):
+                raise SystemExit("Not overwriting.")
     for file in files:
         dest = files[file]
         print(f"Installing {file} to {os.path.dirname(dest)}...", end=" ")
@@ -80,17 +80,19 @@ def install() -> None:
         shutil.copy(source, dest)
         os.chmod(dest, stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP | stat.S_IROTH)
         print("\033[01m\033[32m✓\033[0m")
-    print("Installing required pip packages...")
-    for package in REQUIRED_PACKAGES:
-        subprocess.run((sys.executable, "-m", "pip", "install", package))
-    print(f"Installing {APP_NAME} package...")
-    subprocess.run((sys.executable, "-m", "pip", "install", os.curdir))
+    if install_daemon:
+        if local:
+            print(f"Installing {APP_NAME} package from local directory...")
+            subprocess.run((sys.executable, "-m", "pip", "install", os.curdir))
+        else:
+            print(f"Installing {APP_NAME} package from PyPA...")
+            subprocess.run((sys.executable, "-m", "pip", "install", PACKAGE_NAME))
     print("Enabling and running systemd service...")
     subprocess.run(("systemctl", "enable", APP_NAME))
     subprocess.run(("systemctl", "start", APP_NAME))
 
 
-def uninstall() -> None:
+def uninstall(uninstall_daemon=True) -> None:
     print("Stopping and disabling systemd service...")
     subprocess.run(("systemctl", "stop", APP_NAME))
     subprocess.run(("systemctl", "disable", APP_NAME))
@@ -102,7 +104,8 @@ def uninstall() -> None:
             print(f"Deleting {file}...", end=" ")
             os.remove(file)
             print("\033[01m\033[32m✓\033[0m")
-    subprocess.run((sys.executable, "-m", "pip", "uninstall", "-y", PACKAGE_NAME))
+    if uninstall_daemon:
+        subprocess.run((sys.executable, "-m", "pip", "uninstall", "-y", PACKAGE_NAME))
 
 
 if __name__ == "__main__":
@@ -126,12 +129,24 @@ if __name__ == "__main__":
             ),
         }
         if sys.argv[1] == "install":
-            install()
+            try:
+                if sys.argv[2] == "local":
+                    install(local=True)
+                else:
+                    install()
+            except IndexError:
+                install()
         elif sys.argv[1] == "uninstall":
             uninstall()
         elif sys.argv[1] == "reinstall":
             uninstall()
-            install()
+            try:
+                if sys.argv[2] == "local":
+                    install(local=True)
+                else:
+                    install()
+            except IndexError:
+                install()
         else:
             raise SystemExit("Missing argument: install or uninstall.")
     except IndexError:

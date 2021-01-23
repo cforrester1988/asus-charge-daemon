@@ -17,27 +17,43 @@ It has been tested with the following ASUS notebooks:
 
 - ASUS VivoBook 15 **X512DA**
 
-### Manual Installation
-
 A Python version >= 3.7 is necessary to run this daemon. Most Linux distributions come with the right version. To verify that Python is installed on **Debian**/**Ubuntu**-based distributions, use ```apt```:
 
 ```console
 sudo apt install python3
 ```
 
-On Arch-based distributions, use ```pacman```:
+On **Arch**-based distributions, use ```pacman```:
 
 ```console
 sudo pacman -Syu python
 ```
 
-On RHEL/Fedora-based distributions, use ```rpm```:
+On **RHEL/Fedora**-based distributions, use ```rpm```:
 
 ```console
 sudo rpm -i python3
 ```
 
+### Manual
+
 A **very** rudimentary installation script is included for easy installation. It will copy the files to the appropriate places, install the Python modules, and run the system service.
+
+Download and run the installation script:
+
+```console
+curl https://raw.githubusercontent.com/cforrester1988/asus-charge-daemon/main/install.py -o install.py
+chmod +x install.py
+sudo ./install.py install
+```
+
+To update, run the installation script again, as above. To uninstall:
+
+```console
+sudo ./install.py uninstall
+```
+
+#### git version
 
 Clone the git repository locally:
 
@@ -46,18 +62,18 @@ $ git clone https://github.com/cforrester1988/asus-charge-daemon.git
 Cloning into 'asus-charge-daemon'...
 ```
 
-Navigate to the directory you cloned the repository into, and run the installation script:
+Navigate to the directory you cloned the repository into, and run the installation script. Append ```local``` to work with the cloned package, instead of downloading it from PyPA.
 
 ```console
 cd asus-charge-daemon
-sudo ./install.py install
+sudo ./install.py install local
 ```
 
 To update, pull the latest changes and reinstall:
 
 ```console
 git pull
-sudo ./install.py reinstall
+sudo ./install.py reinstall local
 ```
 
 To uninstall, run the installation script again:

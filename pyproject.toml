@@ -14,7 +14,7 @@ classifiers = [
     "Topic :: System",
 ]
 packages = [{ include = "asuscharged" }]
-include = ["LICENCE"]
+include = ["LICENCE", "install.py", "data/*"]
 
 [tool.poetry.scripts]
 asuscharged = "asuscharged.__main__:main"
