@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=ca.cforrester.AsusChargeDaemon1
+Exec=/usr/bin/python3 -O /usr/local/lib/asus_charge_daemon/asuscharged.py
+User=root
+SystemdService=asuscharged.service
