@@ -6,9 +6,8 @@ import subprocess
 import stat
 import sys
 
-from asuscharged import APP_NAME
+from asuscharged import APP_NAME, PACKAGE_NAME
 
-PACKAGE_NAME = "asus-charge-daemon"
 DATADIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 SYSTEMD_SYSTEM_UNIT_FILE = "asuscharged.service"
 DBUS_INTERFACE_FILE = "ca.cforrester.AsusChargeDaemon1.xml"

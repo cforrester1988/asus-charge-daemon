@@ -6,14 +6,11 @@ import platform
 from argparse import ArgumentParser
 
 import asuscharge
-from . import APP_NAME
+from . import APP_NAME, DBUS_NAME, DBUS_PATH
 from dbus_next.aio import MessageBus
 from dbus_next.constants import BusType
 from dbus_next.service import ServiceInterface, dbus_property
 
-
-DBUS_NAME = "ca.cforrester.AsusChargeDaemon1"
-DBUS_PATH = "/ca/cforrester/AsusChargeDaemon1"
 
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
