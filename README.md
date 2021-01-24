@@ -62,7 +62,7 @@ $ git clone https://github.com/cforrester1988/asus-charge-daemon.git
 Cloning into 'asus-charge-daemon'...
 ```
 
-Navigate to the directory you cloned the repository into, and run the installation script. Append ```local``` to work with the cloned package, instead of downloading it from PyPA.
+Navigate to the directory you cloned the repository into, and run the installation script. Append ```local``` to work with the cloned package, instead of downloading it from PyPI.
 
 ```console
 cd asus-charge-daemon

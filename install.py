@@ -85,7 +85,7 @@ def install(install_daemon=True, force=False, local=False) -> None:
             print(f"Installing {APP_NAME} package from local directory...")
             subprocess.run((sys.executable, "-m", "pip", "install", os.curdir))
         else:
-            print(f"Installing {APP_NAME} package from PyPA...")
+            print(f"Installing {APP_NAME} package from PyPI...")
             subprocess.run((sys.executable, "-m", "pip", "install", PACKAGE_NAME))
     print("Enabling and running systemd service...")
     subprocess.run(("systemctl", "enable", APP_NAME))
