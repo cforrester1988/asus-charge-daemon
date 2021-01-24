@@ -84,5 +84,5 @@ sudo ./install.py uninstall
 
 ## Version history
 
-- 0.1.0 (2021-01-23)
-  - Initial release.
+- 0.2.0 (2021-01-23)
+  - Initial public release.

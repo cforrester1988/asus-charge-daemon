@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "asus-charge-daemon"
-version = "0.1.0"
+version = "0.2.0"
 description = "A daemon exposing D-Bus services for managing the charge level of recent ASUS notebooks."
 authors = ["Christopher Forrester <christopher@cforrester.ca>"]
 license = "GPL-3.0-or-later"
@@ -20,10 +20,10 @@ include = ["LICENCE", "install.py", "data/*"]
 asuscharged = "asuscharged.__main__:main"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.7"
 asus-charge-control = "^1.0.3"
 dbus-next = "^0.2.2"
-systemd-python = "^234"
+systemd-python = ">=234"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.0"
