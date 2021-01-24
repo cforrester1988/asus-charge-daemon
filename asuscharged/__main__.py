@@ -1,15 +1,18 @@
 # type: ignore
 import asyncio
 import logging
+import os
 import platform
 from argparse import ArgumentParser
+from shutil import copyfile
 
 import asuscharge
 from dbus_next.aio import MessageBus
 from dbus_next.constants import BusType
 from dbus_next.service import ServiceInterface, dbus_property
 
-from . import APP_NAME, DBUS_NAME, DBUS_PATH
+from . import APP_NAME, DBUS_NAME, DBUS_PATH, STATE_PATH
+from .config import Config
 
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
@@ -20,10 +23,31 @@ log = logging.getLogger(__name__)
 class ChargeDaemon(ServiceInterface):
     def __init__(self):
         log.debug("Initializing daemon...")
+        self.config = Config()
+        log.debug("Loaded config module.")
         self.controller = asuscharge.ChargeThresholdController()
         log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
         super().__init__(DBUS_NAME)
         log.debug(f"D-Bus service interface '{DBUS_NAME}' initialized.")
+        if self.config["restore_on_start"]:
+            try:
+                threshold = int(open(STATE_PATH, "r").read().strip())
+                log.debug(f"Found previous threshold state: {threshold}%.")
+                if self.controller.end_threshold != threshold:
+                    self.controller.end_threshold = threshold
+                    self.emit_properties_changed(
+                        {"ChargeEndThreshold": self.controller.end_threshold}
+                    )
+            except FileNotFoundError:
+                log.warning(
+                    f"Previous threshold state not found. Using default: {self.controller.end_threshold}%."
+                )
+        else:
+            try:
+                os.remove(STATE_PATH)
+                log.debug("Deleted stale threshold state file.")
+            except FileNotFoundError:
+                pass
 
     @dbus_property()
     def ChargeEndThreshold(self) -> TUInt:
@@ -38,9 +62,11 @@ class ChargeDaemon(ServiceInterface):
             return
         else:
             log.debug(
-                f"Updating ChargeEndThreshold from {self.controller.end_threshold} to {value}."
+                f"Updating ChargeEndThreshold from {self.controller.end_threshold}% to {value}%."
             )
             self.controller.end_threshold = value
+            if self.config["restore_on_start"]:
+                copyfile(self.controller.bat_path, STATE_PATH)
             self.emit_properties_changed(
                 {"ChargeEndThreshold": self.controller.end_threshold}
             )
