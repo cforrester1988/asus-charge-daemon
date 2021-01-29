@@ -5,7 +5,7 @@ import shutil
 import stat
 import subprocess
 import sys
-from typing import List
+from typing import Dict, List
 
 APP_NAME = "asuscharged"
 PACKAGE_NAME = "asus-charge-daemon"
@@ -15,7 +15,7 @@ DBUS_INTERFACE_FILE = "ca.cforrester.AsusChargeDaemon1.xml"
 DBUS_SYSTEM_SERVICE_FILE = "ca.cforrester.AsusChargeDaemon1.service"
 DBUS_SYSTEM_CONF_FILE = "ca.cforrester.AsusChargeDaemon1.conf"
 
-files = {}
+files: Dict[str, str] = {}
 
 
 def has_systemd() -> bool:
@@ -74,13 +74,13 @@ def install(install_daemon=True, force=False, local=False) -> None:
             print(f"The following files exist:\n{exists}")
             if not input("Overwrite? [Y/N] ").startswith(("y", "Y")):
                 raise SystemExit("Not overwriting.")
-    for file in files:
-        dest = files[file]
-        print(f"Installing {file} to {os.path.dirname(dest)}...", end=" ")
-        source = os.path.join(DATADIR, file)
-        shutil.copy(source, dest)
-        os.chmod(dest, stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP | stat.S_IROTH)
-        print("\033[01m\033[32m✓\033[0m")
+        for file in files:
+            dest = files[file]
+            print(f"Installing {file} to {os.path.dirname(dest)}...", end=" ")
+            source = os.path.join(DATADIR, file)
+            shutil.copy(source, dest)
+            os.chmod(dest, stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP | stat.S_IROTH)
+            print("\033[01m\033[32m✓\033[0m")
     if install_daemon:
         if local:
             print(f"Installing {APP_NAME} package from local directory...")
