@@ -19,7 +19,7 @@ from .config import config
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
 
-log = logging.getLogger("daemon")
+log = logging.getLogger("asuscharged")
 
 
 class ChargeDaemon(ServiceInterface):

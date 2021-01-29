@@ -23,7 +23,7 @@ DBUS_PATH = "/ca/cforrester/AsusChargeDaemon1"
 
 if __debug__:
     log_level = logging.DEBUG
-    log_format = "%(asctime)s [%(levelname)s] %(module)s(%(lineno)d) - %(message)s"
+    log_format = "%(asctime)s [%(levelname)s] %(name)s(%(lineno)d) - %(message)s"
 else:
     log_level = logging.WARNING
     log_format = "[%(levelname)s] %(message)s"
