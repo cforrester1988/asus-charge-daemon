@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from os import path
 import shutil
 import stat
 import subprocess
@@ -46,14 +47,14 @@ def dbus_system_services_dir() -> str:
 
 
 def dbus_system_conf_dir() -> str:
-    return (
+    return path.join(
         subprocess.run(
-            ("pkg-config", "dbus-1", "--variable=system_bus_services_dir"),
+            ("pkg-config", "dbus-1", "--variable=sysconfdir"),
             text=True,
             stdout=subprocess.PIPE,
-        )
-        .stdout.replace("-services", ".d")
-        .strip()
+        ).stdout.strip(),
+        "dbus-1",
+        "system.d",
     )
 
 

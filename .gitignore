@@ -1,3 +1,6 @@
+# Don't include the local development files
+dev/
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/linux,vscode,visualstudiocode,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,vscode,visualstudiocode,python

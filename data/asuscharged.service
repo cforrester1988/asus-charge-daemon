@@ -4,12 +4,13 @@ Description=ASUS Battery Charge Control Daemon
 [Service]
 Type=dbus
 BusName=ca.cforrester.AsusChargeDaemon1
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=1
 User=root
 StateDirectory=asuscharged
 ConfigurationDirectory=asuscharged
-Environment="PYTHONOPTIMIZE=1"
+Environment="PYTHONOPTIMIZE=2"
+Environment="PYTHONUNBUFFERED=yes"
 ExecStart=/usr/bin/asuscharged
 
 [Install]

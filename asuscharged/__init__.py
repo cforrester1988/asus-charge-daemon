@@ -3,8 +3,8 @@ ASUS notebooks.
 """
 
 import logging
-from os import path
 import sys
+from os import path
 
 __version__ = "0.2.0"
 
@@ -14,8 +14,10 @@ STATE_DIR = "/var/lib/asuscharged"
 STATE_FILE = "charge_control_end_threshold"
 STATE_PATH = path.join(STATE_DIR, STATE_FILE)
 CONFIG_DIR = "/etc/asuscharged"
-CONFIG_FILE = "asuscharged.toml"
+CONFIG_FILE = "asuscharged.conf"
 CONFIG_PATH = path.join(CONFIG_DIR, CONFIG_FILE)
+DEV_CONFIG_DIR = path.join(path.dirname(path.dirname(__file__)), "dev")
+DEV_CONFIG_PATH = path.join(DEV_CONFIG_DIR, CONFIG_FILE)
 DBUS_NAME = "ca.cforrester.AsusChargeDaemon1"
 DBUS_PATH = "/ca/cforrester/AsusChargeDaemon1"
 

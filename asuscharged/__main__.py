@@ -4,32 +4,32 @@ import logging
 import os
 import platform
 from argparse import ArgumentParser
+from os import path
 from shutil import copyfile
 
 import asuscharge
+from asyncinotify import Inotify, Mask
 from dbus_next.aio import MessageBus
 from dbus_next.constants import BusType
 from dbus_next.service import ServiceInterface, dbus_property
 
 from . import APP_NAME, DBUS_NAME, DBUS_PATH, STATE_PATH
-from .config import Config
+from .config import config
 
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("daemon")
 
 
 class ChargeDaemon(ServiceInterface):
-    def __init__(self):
+    def __init__(self) -> None:
         log.debug("Initializing daemon...")
-        self.config = Config()
-        log.debug("Loaded config module.")
         self.controller = asuscharge.ChargeThresholdController()
         log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
         super().__init__(DBUS_NAME)
         log.debug(f"D-Bus service interface '{DBUS_NAME}' initialized.")
-        if self.config["restore_on_start"]:
+        if config["daemon"]["restore_on_start"]:
             try:
                 threshold = int(open(STATE_PATH, "r").read().strip())
                 log.debug(f"Found previous threshold state: {threshold}%.")
@@ -65,22 +65,55 @@ class ChargeDaemon(ServiceInterface):
                 f"Updating ChargeEndThreshold from {self.controller.end_threshold}% to {value}%."
             )
             self.controller.end_threshold = value
-            if self.config["restore_on_start"]:
+            if config["daemon"]["restore_on_start"]:
                 copyfile(self.controller.bat_path, STATE_PATH)
-            self.emit_properties_changed(
-                {"ChargeEndThreshold": self.controller.end_threshold}
+            # The properties changed signal is emitted when the threshold
+            # file itself is modified. This tracks external changes too.
+            # self.emit_properties_changed(
+            #     {"ChargeEndThreshold": self.controller.end_threshold}
+            # )
+
+
+async def iterate_threshold_events(inotify: Inotify, interface: ChargeDaemon) -> None:
+    async for event in inotify:
+        if event.path.as_posix() == interface.controller.bat_path:
+            log.debug(f"Threshold file modified, signalling property change.")
+            interface.emit_properties_changed(
+                {"ChargeEndThreshold": interface.controller.end_threshold}
             )
 
 
 async def run_daemon() -> None:
-    log.debug("Connecting to D-Bus system bus.")
+    log.debug("Running daemon on D-Bus system bus.")
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
     interface = ChargeDaemon()
     log.debug(f"Exporting interface '{DBUS_NAME}' to path '{DBUS_PATH}'")
     bus.export(DBUS_PATH, interface)
     await bus.request_name(DBUS_NAME)
     log.debug("Daemon running...")
-    await bus.wait_for_disconnect()
+    inotify = Inotify()
+    inotify.add_watch(path.dirname(interface.controller.bat_path), Mask.CLOSE_WRITE)
+    asyncio.gather(
+        bus.wait_for_disconnect(), iterate_threshold_events(inotify, interface)
+    )
+
+
+async def run_client(value: int) -> None:
+    log.debug("Running client on D-Bus system bus.")
+    bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+    introspection = await bus.introspect(DBUS_NAME, DBUS_PATH)
+    daemon_proxy = bus.get_proxy_object(DBUS_NAME, DBUS_PATH, introspection)
+    daemon_interface = daemon_proxy.get_interface(DBUS_NAME)
+    log.debug(f"Acquired client interface {repr(daemon_interface)}.")
+    if await daemon_interface.get_charge_end_threshold() != value:
+        await daemon_interface.set_charge_end_threshold(value)
+        log.debug(
+            f"Set ChargeEndThreshold to {await daemon_interface.get_charge_end_threshold()}. Closing client."
+        )
+    else:
+        log.debug(
+            f"Input matches existing ChargeEndThreshold, not changing. Closing client."
+        )
 
 
 def main() -> None:
@@ -98,13 +131,22 @@ def main() -> None:
         )
     parser = ArgumentParser(APP_NAME)
     parser.add_argument("--bat-path", action="store_true")
+    parser.add_argument("-s", "--set", action="store", type=int)
     args = parser.parse_args()
     if args.bat_path:
         print(asuscharge.ChargeThresholdController().bat_path)
         raise SystemExit(0)
+    elif args.set is not None:
+        if 1 <= args.set <= 100:
+            asyncio.get_event_loop().run_until_complete(run_client(args.set))
+            raise SystemExit(0)
+        else:
+            log.error(f"Tried to set an invalid value: {args.set}%.")
+            raise SystemExit(1)
     else:
         try:
-            asyncio.get_event_loop().run_until_complete(run_daemon())
+            asyncio.get_event_loop().create_task(run_daemon())
+            asyncio.get_event_loop().run_forever()
         except Exception:
             log.exception("Daemon encountered a fatal exception.")
             raise SystemExit(1)
