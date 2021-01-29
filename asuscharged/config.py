@@ -1,6 +1,5 @@
 import configparser
 import logging
-from os import path
 
 from asuscharged import CONFIG_PATH, DEV_CONFIG_PATH
 
