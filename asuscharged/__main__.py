@@ -29,7 +29,7 @@ class ChargeDaemon(ServiceInterface):
         log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
         super().__init__(DBUS_NAME)
         log.debug(f"D-Bus service interface '{DBUS_NAME}' initialized.")
-        if config["daemon"]["restore_on_start"]:
+        if config["daemon"].getboolean("restore_on_start"):
             try:
                 threshold = int(open(STATE_PATH, "r").read().strip())
                 log.debug(f"Found previous threshold state: {threshold}%.")
@@ -65,7 +65,8 @@ class ChargeDaemon(ServiceInterface):
                 f"Updating ChargeEndThreshold from {self.controller.end_threshold}% to {value}%."
             )
             self.controller.end_threshold = value
-            if config["daemon"]["restore_on_start"]:
+            if config["daemon"].getboolean("restore_on_start"):
+                # Shadow the charge end threshold file
                 copyfile(self.controller.bat_path, STATE_PATH)
             # The properties changed signal is emitted when the threshold
             # file itself is modified. This tracks external changes too.

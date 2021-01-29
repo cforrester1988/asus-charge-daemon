@@ -17,7 +17,7 @@ packages = [{ include = "asuscharged" }]
 include = ["LICENCE", "install.py", "data/*"]
 
 [tool.poetry.scripts]
-asuscharged = "asuscharged.__main__==:main"
+asuscharged = "asuscharged.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.7"
