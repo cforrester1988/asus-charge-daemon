@@ -12,14 +12,16 @@ config["daemon"] = {
     "notify_on_change": "yes",
 }
 
-_files = (CONFIG_PATH, DEV_CONFIG_PATH)
 if __debug__:
-    _files_read = config.read(_files)
-    if _files_read:
-        _log.debug(f"Loaded configuration from: {_files_read}")
-    else:
-        _log.debug(
-            f"No valid configuration files found. Exporting defaults to {CONFIG_PATH}"
-        )
-        with open(CONFIG_PATH, "w") as file:
-            config.write(file)
+    _files = (CONFIG_PATH, DEV_CONFIG_PATH)
+else:
+    _files = CONFIG_PATH
+_files_read = config.read(_files)
+if _files_read:
+    _log.debug(f"Loaded configuration from: {_files_read}")
+else:
+    _log.debug(
+        f"No valid configuration files found. Exporting defaults to {CONFIG_PATH}"
+    )
+    with open(CONFIG_PATH, "w") as file:
+        config.write(file)
