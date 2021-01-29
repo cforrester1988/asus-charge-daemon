@@ -10,7 +10,7 @@ from shutil import copyfile
 import asuscharge
 from asyncinotify import Inotify, Mask
 from dbus_next.aio import MessageBus
-from dbus_next.constants import BusType
+from dbus_next.constants import BusType, RequestNameReply
 from dbus_next.service import ServiceInterface, dbus_property
 
 from . import APP_NAME, DBUS_NAME, DBUS_PATH, STATE_PATH
@@ -25,10 +25,10 @@ log = logging.getLogger("asuscharged")
 class ChargeDaemon(ServiceInterface):
     def __init__(self) -> None:
         log.debug("Initializing daemon...")
-        self.controller = asuscharge.ChargeThresholdController()
-        log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
         super().__init__(DBUS_NAME)
         log.debug(f"D-Bus service interface '{DBUS_NAME}' initialized.")
+        self.controller = asuscharge.ChargeThresholdController()
+        log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
         if config["daemon"].getboolean("restore_on_start"):
             try:
                 threshold = int(open(STATE_PATH, "r").read().strip())
@@ -90,7 +90,14 @@ async def run_daemon() -> None:
     interface = ChargeDaemon()
     log.debug(f"Exporting interface '{DBUS_NAME}' to path '{DBUS_PATH}'")
     bus.export(DBUS_PATH, interface)
-    await bus.request_name(DBUS_NAME)
+    if (
+        not (reply := await bus.request_name(DBUS_NAME))
+        == RequestNameReply.PRIMARY_OWNER
+    ):
+        log.critical(
+            f"Unable to acquire primary ownership of bus name '{DBUS_NAME}'. In state: {reply.name}"
+        )
+        raise SystemExit(1)
     log.debug("Daemon running...")
     inotify = Inotify()
     inotify.add_watch(path.dirname(interface.controller.bat_path), Mask.CLOSE_WRITE)
@@ -142,7 +149,7 @@ def main() -> None:
             asyncio.get_event_loop().run_until_complete(run_client(args.set))
             raise SystemExit(0)
         else:
-            log.error(f"Tried to set an invalid value: {args.set}%.")
+            log.critical(f"Tried to set an invalid value: {args.set}%.")
             raise SystemExit(1)
     else:
         try:
