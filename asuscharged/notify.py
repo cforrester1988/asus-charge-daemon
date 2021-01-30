@@ -30,6 +30,8 @@ class AllNotifier:
                 "notify-send",
                 "-c",
                 "device",
+                "-u",
+                "normal",
                 "-a",
                 f"{self._app_name}",
             ]
@@ -39,4 +41,7 @@ class AllNotifier:
             command.append(f"{summary}")
             if body:
                 command.append(f"{body}")
-            subprocess.run(command)
+            try:
+                subprocess.run(command)
+            except subprocess.SubprocessError:
+                log.exception("Failed to send notification.")
