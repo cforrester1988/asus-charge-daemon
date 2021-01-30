@@ -13,8 +13,16 @@ from dbus_next.aio import MessageBus
 from dbus_next.constants import BusType, RequestNameReply
 from dbus_next.service import ServiceInterface, dbus_property
 
-from . import APP_NAME, DBUS_NAME, DBUS_PATH, STATE_PATH
+from . import (
+    APP_NAME,
+    DBUS_NAME,
+    DBUS_PATH,
+    FRIENDLY_NAME,
+    STATE_PATH,
+    NOTIFICATION_ICON,
+)
 from .config import config
+from .notify import AllNotifier
 
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
@@ -29,6 +37,7 @@ class ChargeDaemon(ServiceInterface):
         log.debug(f"D-Bus service interface '{DBUS_NAME}' initialized.")
         self.controller = asuscharge.ChargeThresholdController()
         log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
+        self.notifier = AllNotifier(FRIENDLY_NAME)
         if config["daemon"].getboolean("restore_on_start"):
             try:
                 threshold = int(open(STATE_PATH, "r").read().strip())
@@ -38,6 +47,13 @@ class ChargeDaemon(ServiceInterface):
                     self.emit_properties_changed(
                         {"ChargeEndThreshold": self.controller.end_threshold}
                     )
+                    if config["daemon"].getboolean("notify_on_restore"):
+                        log.debug("Notifying on restore.")
+                        self.notifier.notify(
+                            f"Battery charge limit set to {self.controller.end_threshold}%",
+                            "Restored automatically from saved state.",
+                            NOTIFICATION_ICON,
+                        )
             except FileNotFoundError:
                 log.warning(
                     f"Previous threshold state not found. Using default: {self.controller.end_threshold}%."
@@ -65,6 +81,12 @@ class ChargeDaemon(ServiceInterface):
                 f"Updating ChargeEndThreshold from {self.controller.end_threshold}% to {value}%."
             )
             self.controller.end_threshold = value
+            if config["daemon"].getboolean("notify_on_change"):
+                log.debug("Notifying on change.")
+                self.notifier.notify(
+                    f"Battery charge limit set to {self.controller.end_threshold}%",
+                    icon=NOTIFICATION_ICON,
+                )
             if config["daemon"].getboolean("restore_on_start"):
                 # Shadow the charge end threshold file
                 copyfile(self.controller.bat_path, STATE_PATH)

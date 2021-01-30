@@ -9,6 +9,7 @@ from os import path
 __version__ = "0.2.0"
 
 APP_NAME = "asuscharged"
+FRIENDLY_NAME = "ASUS Battery Charge Control Daemon"
 PACKAGE_NAME = "asus-charge-daemon"
 STATE_DIR = "/var/lib/asuscharged"
 STATE_FILE = "charge_control_end_threshold"
@@ -20,6 +21,7 @@ DEV_CONFIG_DIR = path.join(path.dirname(path.dirname(__file__)), "dev")
 DEV_CONFIG_PATH = path.join(DEV_CONFIG_DIR, CONFIG_FILE)
 DBUS_NAME = "ca.cforrester.AsusChargeDaemon1"
 DBUS_PATH = "/ca/cforrester/AsusChargeDaemon1"
+NOTIFICATION_ICON = "battery-charging-good-symbolic"
 
 if __debug__:
     log_level = logging.DEBUG
