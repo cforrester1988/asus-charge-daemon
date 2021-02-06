@@ -71,7 +71,10 @@ class NotificationServer:
                 log.debug(
                     f"Blocking for new notifications from {pipe} on subprocess for user {user}"
                 )
-                input = pipe.recv()
+                try:
+                    input = pipe.recv()
+                except KeyboardInterrupt:
+                    input = "QUIT"
                 if isinstance(input, Notification):
                     temp_noti.update(input.summary, input.body, input.app_icon)
                     temp_noti.show()
@@ -114,6 +117,9 @@ class NotificationServer:
 
     def close(self) -> None:
         for user in self._procs.keys():
-            self._pipes[user].send("QUIT")
-            # del self._procs[user]
-            # del self._pipes[user]
+            if self._procs[user].is_alive():
+                try:
+                    self._pipes[user].send("QUIT")
+                except BrokenPipeError as e:
+                    self._pipes[user].close()
+                    self._procs[user].terminate()

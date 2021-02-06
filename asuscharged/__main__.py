@@ -148,7 +148,8 @@ async def run_daemon() -> None:
         log.debug(f"Received signal: {signal.Signals(signum).name}")
         tasks.cancel()
         bus.disconnect()
-        interface.notifier.close()
+        if interface.notifier:
+            interface.notifier.close()
         inotify.close()
         raise SystemExit(0)
 
