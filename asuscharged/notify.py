@@ -77,6 +77,7 @@ class NotificationServer:
                     input = "QUIT"
                 if isinstance(input, Notification):
                     temp_noti.update(input.summary, input.body, input.app_icon)
+                    temp_noti.set_hint_byte("urgency", input.urgency.value)
                     temp_noti.show()
                 elif isinstance(input, str) and input == "QUIT":
                     log.debug(f"Quit message received. Shutting down.")
