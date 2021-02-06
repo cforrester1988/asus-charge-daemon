@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import platform
+import signal
 from argparse import ArgumentParser
 from os import path
 from shutil import copyfile
@@ -18,11 +19,11 @@ from . import (
     DBUS_NAME,
     DBUS_PATH,
     FRIENDLY_NAME,
-    STATE_PATH,
     NOTIFICATION_ICON,
+    STATE_PATH,
 )
 from .config import config
-from .notify import AllNotifier
+from .notify import Notification, NotificationServer
 
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
@@ -37,23 +38,35 @@ class ChargeDaemon(ServiceInterface):
         log.debug(f"D-Bus service interface '{DBUS_NAME}' initialized.")
         self.controller = asuscharge.ChargeThresholdController()
         log.debug(f"Acquired ChargeThresholdController: {repr(self.controller)}")
-        self.notifier = AllNotifier(FRIENDLY_NAME)
+        if config["daemon"].getboolean("notify_on_restore") or config[
+            "daemon"
+        ].getboolean("notify_on_change"):
+            self.notifier = NotificationServer()
+        else:
+            self.notifier = None
+        self.override_default_notification = False
         if config["daemon"].getboolean("restore_on_start"):
             try:
                 threshold = int(open(STATE_PATH, "r").read().strip())
                 log.debug(f"Found previous threshold state: {threshold}%.")
                 if self.controller.end_threshold != threshold:
+                    self.override_default_notification = True
                     self.controller.end_threshold = threshold
                     self.emit_properties_changed(
                         {"ChargeEndThreshold": self.controller.end_threshold}
                     )
-                    if config["daemon"].getboolean("notify_on_restore"):
+                    if (
+                        config["daemon"].getboolean("notify_on_restore")
+                        and self.notifier
+                    ):
                         log.debug("Notifying on restore.")
-                        self.notifier.notify(
-                            f"Battery charge limit set to {self.controller.end_threshold}%",
-                            "Restored automatically from saved state.",
-                            NOTIFICATION_ICON,
+                        self.notifier.send(
+                            Notification(
+                                f"Battery charge limit set to {self.controller.end_threshold}%",
+                                "Restored automatically from saved state.",
+                            )
                         )
+                    self.override_default_notification = False
             except FileNotFoundError:
                 log.warning(
                     f"Previous threshold state not found. Using default: {self.controller.end_threshold}%."
@@ -81,12 +94,6 @@ class ChargeDaemon(ServiceInterface):
                 f"Updating ChargeEndThreshold from {self.controller.end_threshold}% to {value}%."
             )
             self.controller.end_threshold = value
-            if config["daemon"].getboolean("notify_on_change"):
-                log.debug("Notifying on change.")
-                self.notifier.notify(
-                    f"Battery charge limit set to {self.controller.end_threshold}%",
-                    icon=NOTIFICATION_ICON,
-                )
             if config["daemon"].getboolean("restore_on_start"):
                 # Shadow the charge end threshold file
                 copyfile(self.controller.bat_path, STATE_PATH)
@@ -104,6 +111,16 @@ async def iterate_threshold_events(inotify: Inotify, interface: ChargeDaemon) ->
             interface.emit_properties_changed(
                 {"ChargeEndThreshold": interface.controller.end_threshold}
             )
+            if (
+                config["daemon"].getboolean("notify_on_change")
+                and interface.notifier
+                and not interface.override_default_notification
+            ):
+                interface.notifier.send(
+                    Notification(
+                        f"Battery charge limit updated to {interface.controller.end_threshold}%"
+                    )
+                )
 
 
 async def run_daemon() -> None:
@@ -123,9 +140,22 @@ async def run_daemon() -> None:
     log.debug("Daemon running...")
     inotify = Inotify()
     inotify.add_watch(path.dirname(interface.controller.bat_path), Mask.CLOSE_WRITE)
-    asyncio.gather(
+    tasks = asyncio.gather(
         bus.wait_for_disconnect(), iterate_threshold_events(inotify, interface)
     )
+
+    def sig_handler(signum, frame) -> None:
+        log.debug(f"Received signal: {signal.Signals(signum).name}")
+        tasks.cancel()
+        bus.disconnect()
+        interface.notifier.close()
+        inotify.close()
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, sig_handler)
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGQUIT, sig_handler)
+    signal.signal(signal.SIGHUP, sig_handler)
 
 
 async def run_client(value: int) -> None:

@@ -24,6 +24,7 @@ python = "^3.7"
 asus-charge-control = "^1.0.3"
 dbus-next = "^0.2.2"
 asyncinotify = "^2.0.2"
+PyGObject = "^3.38.0"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.0"

@@ -21,7 +21,7 @@ DEV_CONFIG_DIR = path.join(path.dirname(path.dirname(__file__)), "dev")
 DEV_CONFIG_PATH = path.join(DEV_CONFIG_DIR, CONFIG_FILE)
 DBUS_NAME = "ca.cforrester.AsusChargeDaemon1"
 DBUS_PATH = "/ca/cforrester/AsusChargeDaemon1"
-NOTIFICATION_ICON = "battery-charging-good-symbolic"
+NOTIFICATION_ICON = "battery-charging-good"
 
 if __debug__:
     log_level = logging.DEBUG
