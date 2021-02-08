@@ -113,8 +113,8 @@ async def iterate_threshold_events(inotify: Inotify, interface: ChargeDaemon) ->
                 {"ChargeEndThreshold": interface.controller.end_threshold}
             )
             if config["daemon"].getboolean("restore_on_start"):
-                # Shadow the charge end threshold file
-                copyfile(self.controller.bat_path, STATE_PATH)
+                log.debug(f"Shadowing the charge end threshold file.")
+                copyfile(interface.controller.bat_path, STATE_PATH)
             if (
                 config["daemon"].getboolean("notify_on_change")
                 and interface.notifier
