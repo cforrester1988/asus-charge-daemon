@@ -16,10 +16,10 @@ from dbus_next.service import ServiceInterface, dbus_property
 
 from . import (
     APP_NAME,
+    CONFIG_DIR,
+    CONFIG_PATH,
     DBUS_NAME,
     DBUS_PATH,
-    FRIENDLY_NAME,
-    NOTIFICATION_ICON,
     STATE_PATH,
 )
 from .config import config
@@ -28,7 +28,7 @@ from .notify import Notification, NotificationServer
 # dbus-next uses string literal type hints to determine the D-Bus type.
 TUInt = "u"
 
-log = logging.getLogger("asuscharged")
+log = logging.getLogger(APP_NAME)
 
 
 class ChargeDaemon(ServiceInterface):
@@ -94,11 +94,12 @@ class ChargeDaemon(ServiceInterface):
                 f"Updating ChargeEndThreshold from {self.controller.end_threshold}% to {value}%."
             )
             self.controller.end_threshold = value
-            if config["daemon"].getboolean("restore_on_start"):
-                # Shadow the charge end threshold file
-                copyfile(self.controller.bat_path, STATE_PATH)
-            # The properties changed signal is emitted when the threshold
-            # file itself is modified. This tracks external changes too.
+            # The shadow file is copied and the properties changed signal
+            # is emitted when the threshold file itself is modified. This
+            # tracks external changes too.
+            # if config["daemon"].getboolean("restore_on_start"):
+            #     # Shadow the charge end threshold file
+            #     copyfile(self.controller.bat_path, STATE_PATH)
             # self.emit_properties_changed(
             #     {"ChargeEndThreshold": self.controller.end_threshold}
             # )
@@ -111,6 +112,9 @@ async def iterate_threshold_events(inotify: Inotify, interface: ChargeDaemon) ->
             interface.emit_properties_changed(
                 {"ChargeEndThreshold": interface.controller.end_threshold}
             )
+            if config["daemon"].getboolean("restore_on_start"):
+                # Shadow the charge end threshold file
+                copyfile(self.controller.bat_path, STATE_PATH)
             if (
                 config["daemon"].getboolean("notify_on_change")
                 and interface.notifier
@@ -121,6 +125,11 @@ async def iterate_threshold_events(inotify: Inotify, interface: ChargeDaemon) ->
                         f"Battery charge limit updated to {interface.controller.end_threshold}%"
                     )
                 )
+        elif event.path.as_posix() == CONFIG_PATH:
+            config.read(CONFIG_PATH)
+            log.debug(
+                f"Configuration file modified, reloaded values: {dict(config['daemon'].items())}"
+            )
 
 
 async def run_daemon() -> None:
@@ -140,6 +149,7 @@ async def run_daemon() -> None:
     log.debug("Daemon running...")
     inotify = Inotify()
     inotify.add_watch(path.dirname(interface.controller.bat_path), Mask.CLOSE_WRITE)
+    inotify.add_watch(CONFIG_DIR, Mask.CLOSE_WRITE)
     tasks = asyncio.gather(
         bus.wait_for_disconnect(), iterate_threshold_events(inotify, interface)
     )
@@ -191,13 +201,10 @@ def main() -> None:
             f"Required kernel module 'asus_nb_wmi' is not loaded. Try 'sudo modprobe asus_nb_wmi'."
         )
     parser = ArgumentParser(APP_NAME)
-    parser.add_argument("--bat-path", action="store_true")
     parser.add_argument("-s", "--set", action="store", type=int)
     args = parser.parse_args()
-    if args.bat_path:
-        print(asuscharge.ChargeThresholdController().bat_path)
-        raise SystemExit(0)
-    elif args.set is not None:
+    if args.set is not None:
+        # Set the threshold with a D-Bus client and quit.
         if 1 <= args.set <= 100:
             asyncio.get_event_loop().run_until_complete(run_client(args.set))
             raise SystemExit(0)
@@ -205,9 +212,11 @@ def main() -> None:
             log.critical(f"Tried to set an invalid value: {args.set}%.")
             raise SystemExit(1)
     else:
+        # Run the daemon.
         try:
-            asyncio.get_event_loop().create_task(run_daemon())
-            asyncio.get_event_loop().run_forever()
+            loop = asyncio.get_event_loop()
+            loop.create_task(run_daemon())
+            loop.run_forever()
         except Exception:
             log.exception("Daemon encountered a fatal exception.")
             raise SystemExit(1)

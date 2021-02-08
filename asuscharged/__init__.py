@@ -6,7 +6,7 @@ import logging
 import sys
 from os import path
 
-__version__ = "0.2.0"
+__version__ = "0.3.1"
 
 APP_NAME = "asuscharged"
 FRIENDLY_NAME = "ASUS Battery Charge Control Daemon"

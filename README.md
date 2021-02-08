@@ -84,5 +84,10 @@ sudo ./install.py uninstall
 
 ## Version history
 
+- 0.3.0 (2021-02-07)
+  - (feature) Desktop notifications
+  - (feature) Monitor threshold for outside changes
+  - (feature) Monitor config for changes
+
 - 0.2.0 (2021-01-23)
   - Initial public release.

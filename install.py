@@ -88,15 +88,17 @@ def install(install_daemon=True, force=False, local=False) -> None:
         else:
             print(f"Installing {APP_NAME} package from PyPI...")
             subprocess.run((sys.executable, "-m", "pip", "install", PACKAGE_NAME))
-    print("Enabling and running systemd service...")
-    subprocess.run(("systemctl", "enable", APP_NAME))
-    subprocess.run(("systemctl", "start", APP_NAME))
+    print("Enabling and running systemd service...", end=" ")
+    subprocess.run(("systemctl", "enable", APP_NAME), capture_output=True)
+    subprocess.run(("systemctl", "start", APP_NAME), capture_output=True)
+    print("\033[01m\033[32m✓\033[0m")
 
 
 def uninstall(uninstall_daemon=True) -> None:
-    print("Stopping and disabling systemd service...")
-    subprocess.run(("systemctl", "stop", APP_NAME))
-    subprocess.run(("systemctl", "disable", APP_NAME))
+    print("Stopping and disabling systemd service...", end=" ")
+    subprocess.run(("systemctl", "stop", APP_NAME), capture_output=True)
+    subprocess.run(("systemctl", "disable", APP_NAME), capture_output=True)
+    print("\033[01m\033[32m✓\033[0m")
     exists = files_exist()
     if not exists:
         print("No data files found, skipping...")

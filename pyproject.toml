@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "asus-charge-daemon"
-version = "0.2.0"
+version = "0.3.1"
 description = "A daemon exposing D-Bus services for managing the charge level of recent ASUS notebooks."
 authors = ["Christopher Forrester <christopher@cforrester.ca>"]
 license = "GPL-3.0-or-later"
