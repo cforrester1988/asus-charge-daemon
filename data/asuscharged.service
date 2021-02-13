@@ -1,5 +1,6 @@
 [Unit]
 Description=ASUS Battery Charge Control Daemon
+Requires=local-fs.target
 
 [Service]
 Type=dbus
