@@ -14,8 +14,10 @@ from typing import Dict, Optional, Set
 import gi
 
 gi.require_version("Notify", "0.7")
+gi.require_version("DBus", "1.0")
 
 from gi.repository import Notify
+from gi.repository.DBus import Error as GDBusError
 
 from . import FRIENDLY_NAME, NOTIFICATION_ICON
 
@@ -78,7 +80,10 @@ class NotificationServer:
                 if isinstance(input, Notification):
                     temp_noti.update(input.summary, input.body, input.app_icon)
                     temp_noti.set_hint_byte("urgency", input.urgency.value)
-                    temp_noti.show()
+                    try:
+                        temp_noti.show()
+                    except GDBusError as e:
+                        log.exception("Failed to show notification.")
                 elif isinstance(input, str) and input == "QUIT":
                     log.debug(f"Quit message received. Shutting down.")
                     pipe.close()
